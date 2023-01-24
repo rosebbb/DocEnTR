@@ -53,7 +53,7 @@ We gathered the DIBCO, H-DIBCO and PALM datasets and organized them in one folde
 Specify the data path, split size, validation and testing sets to prepare your data. In this example, we set the split size as (256 X 256), the validation set as 2016 and the testing as 2018 while running the process_dibco.py file.
  
 ```bash
-python process_dibco.py --data_path /YOUR_DATA_PATH/ --split_size 256 --testing_dataset 2018 --validation_dataset 2016
+python process_dibco.py --data_path /data/Datasets/Binarization/ --split_size 256 --testing_dataset 2018 --validation_dataset 2016
 ```
  
 ## Using DocEnTr

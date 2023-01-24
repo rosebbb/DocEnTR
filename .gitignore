@@ -202,3 +202,9 @@ cython_debug/
 Pretrained
 demo
 weights
+checkpoints/
+*.avi
+visbase_256_16/
+temp*
+result/
+data

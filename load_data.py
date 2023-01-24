@@ -115,13 +115,13 @@ def load_datasets(flipped=False):
         data_test (Dateset): test data
     """
     cfg = Configs().parse() 
-    base_dir = cfg.data_path
-    split_size  = cfg.split_size
-    data_tr = os.listdir(cfg.data_path+'train')
+    base_dir = '/data/Datasets/Binarization/Accessmath/'
+    split_size  = 256
+    data_tr = os.listdir(base_dir+'train')
     np.random.shuffle(data_tr)
-    data_va = os.listdir(cfg.data_path+'valid')
+    data_va = os.listdir(base_dir+'valid')
     np.random.shuffle(data_va)
-    data_te = os.listdir(cfg.data_path+'test')
+    data_te = os.listdir(base_dir+'test')
     np.random.shuffle(data_te)
     
     data_train = Read_data(base_dir, data_tr, 'train', split_size, augmentation=True)

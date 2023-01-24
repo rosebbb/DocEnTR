@@ -6,12 +6,15 @@ import matplotlib.pyplot as plt
 from vit_pytorch import ViT
 from models.binae import BinModel
 from einops import rearrange
+import time
+import glob
+import os
 
 THRESHOLD = 0.5 ## binarization threshold after the model output
 
 SPLITSIZE =  256  ## your image will be divided into patches of 256x256 pixels
 setting = "base"  ## choose the desired model size [small, base or large], depending on the model you want to use
-patch_size = 8 ## choose your desired patch size [8 or 16], depending on the model you want to use
+patch_size = 16 ## choose your desired patch size [8 or 16], depending on the model you want to use
 image_size =  (SPLITSIZE,SPLITSIZE)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -48,11 +51,96 @@ model = BinModel(
 
 model = model.to(device)
 
-model_path = "./weights/best-model_8_2018base_256_8.pt"
-model.load_state_dict(torch.load(model_path, map_location=device))
+# model_path = "./weights/best-model_8_2017base_256_8.pt"
+model_path = '/data/Projects/DocEnTR/checkpoints/63000.pt'
+checkpoint = torch.load(model_path, map_location=device)
+model.load_state_dict(checkpoint['model_state_dict'])
+# model.load_state_dict(torch.load(model_path, map_location=device))
 
-deg_folder = '/data/Datasets/TextDetection/AccessMath/AccessMath_ICDAR_2017_data/annotations/AccessMath2015_lecture_01/keyframes/'
-image_name = '10423.png'
-deg_image = cv2.imread(deg_folder+image_name) / 255
+# deg_folder = '/data/Datasets/Binarization/Accessmath/input_test/'
+deg_folder = '/data/Datasets/Binarization/test/'
+for image_file in glob.glob(os.path.join(deg_folder, '*.png')):
+    image_name = os.path.basename(image_file)
+    deg_image = cv2.imread(image_file) / 255
 
-plt.imshow(deg_image[:, :, [2, 1, 0]]) # Show image 
+    plt.imshow(deg_image[:, :, [2, 1, 0]]) # Show image 
+
+    def split(im,h,w):
+        patches=[]
+        nsize1=SPLITSIZE
+        nsize2=SPLITSIZE
+        for ii in range(0,h,nsize1): #2048
+            for iii in range(0,w,nsize2): #1536
+                patches.append(im[ii:ii+nsize1,iii:iii+nsize2,:])
+        
+        return patches 
+
+    def merge_image(splitted_images, h,w):
+        image=np.zeros(((h,w,3)))
+        nsize1=SPLITSIZE
+        nsize2=SPLITSIZE
+        ind =0
+        for ii in range(0,h,nsize1):
+            for iii in range(0,w,nsize2):
+                image[ii:ii+nsize1,iii:iii+nsize2,:]=splitted_images[ind]
+                ind += 1
+        return image  
+
+
+    start = time.time()
+    ## Split the image intop patches, an image is padded first to make it dividable by the split size
+    h =  ((deg_image.shape[0] // 256) +1)*256 
+    w =  ((deg_image.shape[1] // 256 ) +1)*256
+    deg_image_padded=np.ones((h,w,3))
+    deg_image_padded[:deg_image.shape[0],:deg_image.shape[1],:]= deg_image
+    patches = split(deg_image_padded, deg_image.shape[0], deg_image.shape[1])
+
+    ## preprocess the patches (images)
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+
+    out_patches=[]
+    for p in patches:
+        out_patch = np.zeros([3, *p.shape[:-1]])
+        for i in range(3):
+            out_patch[i] = (p[:,:,i] - mean[i]) / std[i]
+        out_patches.append(out_patch)
+
+
+    result = []
+    for patch_idx, p in enumerate(out_patches):
+        print(f"({patch_idx} / {len(out_patches) - 1}) processing patch...")
+        p = np.array(p, dtype='float32')
+        train_in = torch.from_numpy(p)
+
+        with torch.no_grad():
+            train_in = train_in.view(1,3,SPLITSIZE,SPLITSIZE).to(device)
+            _ = torch.rand((train_in.shape)).to(device)
+            loss,_, pred_pixel_values = model(train_in,_)
+            rec_patches = pred_pixel_values
+            rec_image = torch.squeeze(rearrange(rec_patches, 'b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1 = patch_size, p2 = patch_size,  h=image_size[0]//patch_size))
+            impred = rec_image.cpu().numpy()
+            impred = np.transpose(impred, (1, 2, 0))
+            for ch in range(3):
+                impred[:,:,ch] = (impred[:,:,ch] *std[ch]) + mean[ch]
+            impred[np.where(impred>1)] = 1
+            impred[np.where(impred<0)] = 0
+        result.append(impred)
+
+    clean_image = merge_image(result, deg_image_padded.shape[0], deg_image_padded.shape[1])
+    clean_image = clean_image[:deg_image.shape[0], :deg_image.shape[1],:]
+    clean_image = (clean_image>THRESHOLD)*255
+
+    endtime = time.time()
+    print('time used: ', endtime-start)
+    plt.imshow(clean_image)
+
+    output_dir = pathlib.Path('./demo/cleaned')
+    output_dir.mkdir(exist_ok=True)
+
+    model_name = pathlib.Path(model_path).stem
+    image_path = pathlib.Path(image_name)
+    output_path = output_dir.joinpath(f'{image_path.stem}__{model_name}{image_path.suffix}')
+
+    cv2.imwrite(str(output_path), clean_image)
+    print(f'created file: {output_path}')
