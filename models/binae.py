@@ -39,7 +39,7 @@ class BinModel(nn.Module):
         self.decoder_pos_emb = nn.Embedding(num_patches, decoder_dim)
         self.to_pixels = nn.Linear(decoder_dim, pixel_values_per_patch)
 
-    def forward(self, img, gt_img):
+    def forward(self, img, gt_img=None):
         
         # get patches and their number
         patches = self.to_patch(img)
@@ -61,8 +61,12 @@ class BinModel(nn.Module):
         # project tokens to pixels
         pred_pixel_values = self.to_pixels(decoded_tokens)
 
-        # calculate the loss with gt
-        gt_patches = self.to_patch(gt_img)
-        loss = F.mse_loss(pred_pixel_values, gt_patches)
+        if gt_img is not None:  
+            # calculate the loss with gt
+            gt_patches = self.to_patch(gt_img)
+            loss = F.mse_loss(pred_pixel_values, gt_patches)
 
-        return loss, patches, pred_pixel_values
+            return loss, patches, pred_pixel_values
+        else:
+            print('gt img is not provided')
+            return _, _, pred_pixel_values

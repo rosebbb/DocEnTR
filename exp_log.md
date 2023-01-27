@@ -4,6 +4,7 @@
 2. Process the dataset 
     `python process_accessmath.py`
 3. Inference
-    `python inference.py`
+    `python inference.py` result saved in 
 4. Inference in real time
     `python inference_realtime.py`
+    result will 
