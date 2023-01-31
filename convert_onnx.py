@@ -55,9 +55,10 @@ def convertONNX():
                     opset_version=10,          # the ONNX version to export the model to
                     do_constant_folding=True,  # whether to execute constant folding for optimization
                     input_names = ['input'],   # the model's input names
-                    output_names = ['output'], # the model's output names
-                    dynamic_axes={'input' : {0 : 'batch_size'},    # variable length axes
-                                    'output' : {0 : 'batch_size'}})
+                    output_names = ['loss', 'patches', 'pred_pixel_values'], # the model's output names
+                    # dynamic_axes={'input' : {0 : 'batch_size'},    # variable length axes
+                    #                 'output' : {0 : 'batch_size'}}
+                    )
     
 def test_onnx():
     onnx_model = onnx.load("./onnx_models/whiteboard_8_base_256_8.onnx")
@@ -70,6 +71,21 @@ def run_onnx():
     _, _, torch_out = torch_model(x)
 
     ort_session = onnxruntime.InferenceSession("./onnx_models/whiteboard_8_base_256_8.onnx")
+    input_name = ort_session.get_inputs()[0].name
+    print("input name", input_name)
+    input_shape = ort_session.get_inputs()[0].shape
+    print("input shape", input_shape)
+    input_type = ort_session.get_inputs()[0].type
+    print("input type", input_type)
+
+
+    for i in range(3):
+        output_name = ort_session.get_outputs()[i].name
+        print("output name", output_name)
+        output_shape = ort_session.get_outputs()[i].shape
+        print("output shape", output_shape)
+        output_type = ort_session.get_outputs()[i].type
+        print("output type", output_type)
 
     def to_numpy(tensor):
         return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
@@ -116,5 +132,5 @@ def run_onnx_on_img():
         for i in range(3):
             out_patch[i] = (p[:,:,i] - mean[i]) / std[i]
         out_patches.append(out_patch)
-        
+convertONNX()
 run_onnx()
