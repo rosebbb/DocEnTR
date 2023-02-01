@@ -9,6 +9,7 @@ from einops import rearrange
 import time
 import glob
 import os
+from math import ceil
 
 THRESHOLD = 0.5 ## binarization threshold after the model output
 
@@ -59,10 +60,12 @@ checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 # model.load_state_dict(torch.load(model_path, map_location=device))
 
-deg_folder = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/input_test/'
+deg_folder = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/test/'
 # deg_folder = '/data/Datasets/Binarization/test/'
 for image_file in glob.glob(os.path.join(deg_folder, '*.png')):
     image_name = os.path.basename(image_file)
+    if image_name != '13219_0_256.png':
+        continue
     deg_image = cv2.imread(image_file) / 255
 
     # plt.imshow(deg_image[:, :, [2, 1, 0]]) # Show image 
@@ -88,8 +91,8 @@ for image_file in glob.glob(os.path.join(deg_folder, '*.png')):
 
     start = time.time()
     ## Split the image intop patches, an image is padded first to make it dividable by the split size
-    h =  ((deg_image.shape[0] // 256) +1)*256 
-    w =  ((deg_image.shape[1] // 256 ) +1)*256
+    h =  (ceil(deg_image.shape[0] / 256))*256 
+    w =  (ceil(deg_image.shape[1] / 256))*256
     deg_image_padded = np.ones((h,w,3))
     deg_image_padded[:deg_image.shape[0],:deg_image.shape[1],:] = deg_image
 
@@ -110,7 +113,7 @@ for image_file in glob.glob(os.path.join(deg_folder, '*.png')):
         with torch.no_grad():
             train_in = train_in.view(1,3,SPLITSIZE,SPLITSIZE).to(device)
             _ = torch.rand((train_in.shape)).to(device)
-            loss,_, pred_pixel_values = model(train_in,_)
+            _,_, pred_pixel_values = model(train_in,_)
             rec_patches = pred_pixel_values
             rec_image = torch.squeeze(rearrange(rec_patches, 'b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1 = patch_size, p2 = patch_size,  h=image_size[0]//patch_size))
             impred = rec_image.cpu().numpy()
