@@ -20,9 +20,9 @@ def prepare_accessmath_experiment(patches_size, overlap_size, patches_size_valid
     print(len(img_list))
 
     random.shuffle(img_list)
-    train_list = img_list[:100]
-    val_list = img_list[100:115]
-    test_list = img_list[115:]
+    train_list = img_list[:280]
+    val_list = img_list[280:315]
+    test_list = img_list[315:]
 
     n_i = 1
     for img_file in train_list:
@@ -57,8 +57,8 @@ def prepare_accessmath_experiment(patches_size, overlap_size, patches_size_valid
                     p[0:img.shape[0]-i,0:img.shape[1]-j,:] = img[i:img.shape[0],j:img.shape[1],:]
                     gt_p[0:img.shape[0]-i,0:img.shape[1]-j,:] = gt_img[i:img.shape[0],j:img.shape[1],:]
                 
-                cv2.imwrite(data_path+'train/'+str(n_i)+'.png',p)
-                cv2.imwrite(data_path+'train_gt/'+str(n_i)+'.png',gt_p)
+                cv2.imwrite(out_data_path+'/train/'+str(n_i)+'.png',p)
+                cv2.imwrite(out_data_path+'/train_gt/'+str(n_i)+'.png',gt_p)
                 n_i+=1
                     
     for img_file in test_list:
@@ -95,8 +95,8 @@ def prepare_accessmath_experiment(patches_size, overlap_size, patches_size_valid
                     gt_p[0:img.shape[0]-i,0:img.shape[1]-j,:] = gt_img[i:img.shape[0],j:img.shape[1],:]
 
                 img_name = os.path.basename(img_file)    
-                cv2.imwrite(data_path+'test/'+img_name.split('.')[0]+'_'+str(i)+'_'+str(j)+'.png',p)
-                cv2.imwrite(data_path+'test_gt/'+img_name.split('.')[0]+'_'+str(i)+'_'+str(j)+'.png',gt_p)
+                cv2.imwrite(out_data_path+'/test/'+img_name.split('.')[0]+'_'+str(i)+'_'+str(j)+'.png',p)
+                cv2.imwrite(out_data_path+'/test_gt/'+img_name.split('.')[0]+'_'+str(i)+'_'+str(j)+'.png',gt_p)
 
     for img_file in val_list:
         print('-val: ', img_file)
@@ -148,13 +148,14 @@ if __name__ == "__main__":
     p_size_valid  = patch_size
     overlap_size = patch_size//2
 
+    out_data_path = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/train_round_2'
     # create train/val/test data_paths if theu are not existent
-    os.makedirs(data_path+'train/', exist_ok=True)
-    os.makedirs(data_path+'train_gt/', exist_ok=True)
-    os.makedirs(data_path+'valid/', exist_ok=True)
-    os.makedirs(data_path+'valid_gt/', exist_ok=True)
-    os.makedirs(data_path+'test/', exist_ok=True)
-    os.makedirs(data_path+'test_gt/', exist_ok=True)
+    os.makedirs(out_data_path+'/train/', exist_ok=True)
+    os.makedirs(out_data_path+'/train_gt/', exist_ok=True)
+    os.makedirs(out_data_path+'/valid/', exist_ok=True)
+    os.makedirs(out_data_path+'/valid_gt/', exist_ok=True)
+    os.makedirs(out_data_path+'/test/', exist_ok=True)
+    os.makedirs(out_data_path+'/test_gt/', exist_ok=True)
 
     # create your data...
     prepare_accessmath_experiment(p_size_train, overlap_size, p_size_valid)

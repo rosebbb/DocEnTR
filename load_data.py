@@ -102,7 +102,7 @@ class Read_data(D.Dataset):
         return file_name, out_deg_img, out_gt_img
 
 
-def load_datasets(flipped=False):
+def load_datasets(train_dir, split_size, flipped=False):
     """
     Create the 3 datasets (train/valid/test) to be used by the dataloaders.
 
@@ -115,18 +115,16 @@ def load_datasets(flipped=False):
         data_test (Dateset): test data
     """
     cfg = Configs().parse() 
-    base_dir = '/data/Datasets/Binarization/Accessmath/'
-    split_size  = 256
-    data_tr = os.listdir(base_dir+'train')
+    data_tr = os.listdir(train_dir+'train')
     np.random.shuffle(data_tr)
-    data_va = os.listdir(base_dir+'valid')
+    data_va = os.listdir(train_dir+'valid')
     np.random.shuffle(data_va)
-    data_te = os.listdir(base_dir+'test')
+    data_te = os.listdir(train_dir+'test')
     np.random.shuffle(data_te)
     
-    data_train = Read_data(base_dir, data_tr, 'train', split_size, augmentation=True)
-    data_valid = Read_data(base_dir, data_va, 'valid', split_size, augmentation=False, flipped = flipped)
-    data_test = Read_data(base_dir, data_te, 'test', split_size, augmentation=False)
+    data_train = Read_data(train_dir, data_tr, 'train', split_size, augmentation=True)
+    data_valid = Read_data(train_dir, data_va, 'valid', split_size, augmentation=False, flipped = flipped)
+    data_test = Read_data(train_dir, data_te, 'test', split_size, augmentation=False)
 
     return data_train, data_valid, data_test
 
@@ -161,7 +159,7 @@ def sort_batch(batch):
 
     return data_index, data_in, data_out
 
-def all_data_loader(batch_size):
+def all_data_loader(batch_size, train_dir, SPLITSIZE):
     """
     Create the 3 data loaders
 
@@ -172,7 +170,7 @@ def all_data_loader(batch_size):
         valid_loader (dataloader): valid data loader
         test_loader (dataloader): test data loader
     """
-    data_train, data_valid, data_test = load_datasets()
+    data_train, data_valid, data_test = load_datasets(train_dir, SPLITSIZE)
     train_loader = torch.utils.data.DataLoader(data_train, collate_fn=sort_batch, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid, collate_fn=sort_batch, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test, collate_fn=sort_batch, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)

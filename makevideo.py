@@ -1,8 +1,8 @@
 import cv2
 import os
 
-image_folder = '/data/Projects/DocEnTR/result'
-video_name = 'test_result_1.avi'
+image_folder = './demo/videos/whiteboard_0720_short_v2'
+video_name = 'whiteboard_bin_realtime_v2.avi'
 
 images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
 frame = cv2.imread(os.path.join(image_folder, images[0]))

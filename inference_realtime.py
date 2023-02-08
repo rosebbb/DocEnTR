@@ -47,7 +47,7 @@ model = BinModel(
 )
 model = model.to(device)
 
-model_path = '/data/Projects/DocEnTR/checkpoints/63000.pt'
+model_path = './weights/whiteboard_8_base_256_8.pt'
 checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -197,6 +197,7 @@ class ProcessFrame(object):
 
 canvas_w = 1920
 canvas_h = 1080
+# cam_id = './demo/videos/WIN_20230202_12_57_58_Pro.mp4'
 cam_id = '/data/Projects/room-video/Whiteboard/video_samples/whiteboard_0720_short.mp4'
 clean_image = np.full((canvas_h, canvas_w, 3),
                         255, dtype = np.uint8)
@@ -220,4 +221,4 @@ while True:
 
     num_processed+=1
     # cv2.imshow('video', merged)
-    cv2.imwrite('./result/'+str(num_processed)+'.jpg', merged)
+    cv2.imwrite('./demo/videos/whiteboard_0720_short_v2/'+str(num_processed)+'.jpg', merged)

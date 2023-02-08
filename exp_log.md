@@ -3,6 +3,8 @@
 
 2. Process the dataset 
     `python process_accessmath.py`
+3. Train
+    `python train.py`
 3. Inference
     `python inference.py` result saved in 
 4. Inference in real time

@@ -1,5 +1,6 @@
 import torch
 from vit_pytorch import ViT
+from vit_pytorch.mobile_vit import MobileViT
 from models.binae import BinModel
 import torch.optim as optim
 from einops import rearrange
@@ -7,8 +8,7 @@ import load_data
 import utils as utils
 from  config import Configs
 import os
-import torch.nn.functional as F
-import time
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # get utils functions
@@ -37,15 +37,23 @@ def build_model(setting, image_size, patch_size):
     encoder_dim = hyper_params[setting][2]
 
     # define encoder
-    v = ViT(
+    # v = ViT(
+    #     image_size = image_size, #(256,256)
+    #     patch_size = patch_size, #16
+    #     num_classes = 1000,
+    #     dim = encoder_dim, # 768
+    #     depth = encoder_layers, #6
+    #     heads = encoder_heads, #8
+    #     mlp_dim = 2048
+    # )
+
+    v = MobileViT(
         image_size = image_size,
-        patch_size = patch_size,
-        num_classes = 1000,
-        dim = encoder_dim,
-        depth = encoder_layers,
-        heads = encoder_heads,
-        mlp_dim = 2048
+        dims = [96, 120, 144],
+        channels = [16, 32, 48, 48, 64, 64, 80, 80, 96, 96, 384],
+        num_classes = 1000
     )
+
 
     # define full model
     model = BinModel(
@@ -54,7 +62,7 @@ def build_model(setting, image_size, patch_size):
         decoder_depth = encoder_layers,
         decoder_heads = encoder_heads  
     )
-    return model, v
+    return model
 
 def visualize(model, epoch, validloader, image_size, patch_size):
     """
@@ -122,12 +130,6 @@ def valid_model(model, data_path, epoch, experiment, valid_dibco):
 best_psnr = 0
 best_epoch = 0
 
-def compute_loss(gt_img, output_imgs):
-    # calculate the loss with gt
-    loss = F.mse_loss(output_imgs, gt_img)
-
-    return loss
-
 if __name__ == "__main__":
     # get configs
     cfg = Configs().parse()
@@ -142,6 +144,9 @@ if __name__ == "__main__":
     setting = 'base'
     TPS = 16
     batch_size = 32
+    valid_dibco = '2016'
+    data_path = '/data/Datasets/Binarization/Accessmath/'
+
     patch_size = TPS
     image_size =  (SPLITSIZE,SPLITSIZE)
     vis_results = True
@@ -151,44 +156,39 @@ if __name__ == "__main__":
     experiment = setting +'_'+ str(SPLITSIZE)+'_' + str(TPS)
     
     # get dataloaders
-    train_dir = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/train_round_2/'
-    trainloader, validloader, _ = load_data.all_data_loader(batch_size, train_dir, SPLITSIZE)
+    trainloader, validloader, _ = load_data.all_data_loader(batch_size)
     
     # get model
-    model, v = build_model(setting, image_size, patch_size)
-    model_path = '/data/Projects/DocEnTR/weights/whiteboard_8_base_256_8.pt'
-    checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    startepoch = 0
+    model = build_model(setting, image_size, patch_size)
+    # model_path = '/data/Projects/DocEnTR/checkpoints/63000.pt'
+    # checkpoint = torch.load(model_path, map_location=device)
+    # model.load_state_dict(checkpoint['model_state_dict'])
 
     model = model.to(device)
     optimizer = optim.AdamW(model.parameters(),lr=1.5e-4, betas=(0.9, 0.95),
                          eps=1e-08, weight_decay=0.05, amsgrad=False)
 
-    starttime = time.time()
     # train the model for the specified epochs
     current_step = 0
-    for epoch in range(startepoch, epochs): 
+    for epoch in range(1, epochs): 
         running_loss = 0.0
         for i, (train_index, train_in, train_out) in enumerate(trainloader):
             # get input/target pairs
             inputs = train_in.to(device)
-            gt_imgs = train_out.to(device) # gt_img
+            outputs = train_out.to(device)
             optimizer.zero_grad()
-            pred_img = model(inputs)
-            # pred_img = model(inputs, gt_imgs)
-            # # forward pass
-            loss = compute_loss(gt_imgs, pred_img)
+            # forward pass
+            loss, _,_= model(inputs,outputs)
             # backward pass
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
 
-            show_every = int(len(trainloader) / 100)
+            show_every = int(len(trainloader) / 7)
 
             training_loss = running_loss / show_every
             current_step += 1
-            if current_step % 2000 == 0:
+            if current_step % 1000 == 0:
                 save_path = '/data/Projects/DocEnTR/checkpoints/'+str(current_step)+'.pt'
                 torch.save({
                     'epoch': epoch,
@@ -201,9 +201,6 @@ if __name__ == "__main__":
             if i % show_every == show_every-1:    # print every n mini-batches. here n = len(data)/7
                 print('[Epoch: %d, Iter: %5d] Train loss: %.3f' % (epoch, i + 1, running_loss / show_every))
                 running_loss = 0.0
-                time_elapsed = time.time() - starttime
-                print(time_elapsed)
-                starttime = time.time()
 
 
         # visialize result and valid loss

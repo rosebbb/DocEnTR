@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from vit_pytorch.vit import Transformer
+from einops import rearrange
 
 
 class BinModel(nn.Module):
@@ -39,7 +40,7 @@ class BinModel(nn.Module):
         self.decoder_pos_emb = nn.Embedding(num_patches, decoder_dim)
         self.to_pixels = nn.Linear(decoder_dim, pixel_values_per_patch)
 
-    def forward(self, img, gt_img=None):
+    def forward(self, img):
         
         # get patches and their number
         patches = self.to_patch(img)
@@ -60,13 +61,24 @@ class BinModel(nn.Module):
 
         # project tokens to pixels
         pred_pixel_values = self.to_pixels(decoded_tokens)
+        rec_image = torch.squeeze(rearrange(pred_pixel_values, 'b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1 = 16, p2 = 16,  h=256//16))
 
-        if gt_img is not None:  
-            # calculate the loss with gt
-            gt_patches = self.to_patch(gt_img)
-            loss = F.mse_loss(pred_pixel_values, gt_patches)
+        return rec_image
 
-            return loss, patches, pred_pixel_values
-        else:
-            print('gt img is not provided')
-            return _, _, pred_pixel_values
+        # # loss_1 = F.mse_loss(rec_image, gt_img)
+
+        # if gt_img is not None:  
+        #     # calculate the loss with gt
+        #     gt_patches = self.to_patch(gt_img)
+        #     loss = F.mse_loss(pred_pixel_values, gt_patches)
+
+        #     return loss, patches, pred_pixel_values
+        # else:
+        #     print('gt img is not provided')
+        #     return _, _, pred_pixel_values
+
+
+# gt_img :              torch.Size([32, 3, 256, 256])
+# gt_patches:           torch.Size([32, 256, 768])
+# ped_pixel_values:     torch.Size([32, 256, 768])  
+# rec_image:            torch.Size([32, 3, 256, 256])

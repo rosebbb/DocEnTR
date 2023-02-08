@@ -60,7 +60,7 @@ checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 # model.load_state_dict(torch.load(model_path, map_location=device))
 
-image_file = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/test/13219_512_1024.png'
+image_file = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/train_round_1/test/13219_512_1024.png'
 # deg_folder = '/data/Datasets/Binarization/test/'
 image_name = os.path.basename(image_file)
 
@@ -86,7 +86,8 @@ with torch.no_grad():
     train_in = train_in.view(1,3,SPLITSIZE,SPLITSIZE).to(device)
     _ = torch.rand((train_in.shape)).to(device)
     _,_, pred_pixel_values = model(train_in,_)
-    rec_image = torch.squeeze(rearrange(pred_pixel_values, 'b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1 = patch_size, p2 = patch_size,  h=image_size[0]//patch_size))
+    reshaped = rearrange(pred_pixel_values, 'b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1 = patch_size, p2 = patch_size,  h=image_size[0]//patch_size)
+    rec_image = torch.squeeze(reshaped)
     impred = rec_image.cpu().numpy()
     impred = np.transpose(impred, (1, 2, 0))
     for ch in range(3):

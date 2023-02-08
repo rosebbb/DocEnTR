@@ -54,18 +54,18 @@ model = BinModel(
 
 model = model.to(device)
 
-# model_path = "./weights/best-model_8_2017base_256_8.pt"
 model_path = './weights/whiteboard_8_base_256_8.pt'
 checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
+
+# model_path = '/data/Projects/DocEnTR/checkpoints/178000.pt'
 # model.load_state_dict(torch.load(model_path, map_location=device))
 
-deg_folder = '/data/Datasets/Binarization/Accessmath/data_for_DocEnTr/test/'
+deg_folder = '/data/Datasets/Binarization/Accessmath/data_with_person/input'
 # deg_folder = '/data/Datasets/Binarization/test/'
 for image_file in glob.glob(os.path.join(deg_folder, '*.png')):
+    print(image_file)
     image_name = os.path.basename(image_file)
-    if image_name != '13219_0_256.png':
-        continue
     deg_image = cv2.imread(image_file) / 255
 
     # plt.imshow(deg_image[:, :, [2, 1, 0]]) # Show image 
@@ -132,7 +132,7 @@ for image_file in glob.glob(os.path.join(deg_folder, '*.png')):
     print('time used: ', endtime-start)
     plt.imshow(clean_image)
 
-    output_dir = pathlib.Path('./demo/cleaned_1')
+    output_dir = pathlib.Path('./demo/clean_person_model_8_2017base_256_8')
     output_dir.mkdir(exist_ok=True)
 
     model_name = pathlib.Path(model_path).stem
